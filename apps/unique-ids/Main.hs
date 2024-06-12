@@ -1,6 +1,6 @@
 module Main where
 
-import Control.Concurrent (forkIO)
+import Control.Concurrent (forkIO, newChan, readChan, writeChan)
 import Control.Monad (forever)
 import System.IO (hSetBuffering, BufferMode(..), stdin, stdout)
 
@@ -10,7 +10,11 @@ main :: IO ()
 main = do
   hSetBuffering stdin NoBuffering
   hSetBuffering stdout NoBuffering
+  chan <- newChan
   _ <- handleInit
-  forever . forkIO $ do
+  _ <- forkIO . forever $ do
     msg <- receive
-    respond msg
+    writeChan chan msg
+  forever $ do
+    msg' <- readChan chan
+    respond msg'

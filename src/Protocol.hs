@@ -51,15 +51,23 @@ instance ToJSON Body where
                          ]
                         <> maybe mempty (\a -> [ "msg_id" .= a ]) msgId
     EchoOk{..} -> object $ [ "type" .= ("echo_ok" :: Text)
-                           , "echo" .= echo 
+                           , "echo" .= echo
                            ] 
                           <> maybe mempty (\a -> pure $ "msg_id" .= a) msgId
                           <> maybe mempty (\a -> pure $ "in_reply_to" .= a) inReplyTo
-
+    Generate -> object $ [ "type" .= ("generate" :: Text)
+                         ] <> maybe mempty (\a -> [ "msg_id" .= a ]) msgId
+    GenerateOk id' -> object $ [ "type" .= ("generate_ok" :: Text)
+                           , "id" .= id'
+                           ]
+                          <> maybe mempty (\a -> pure $ "msg_id" .= a) msgId
+                          <> maybe mempty (\a -> pure $ "in_reply_to" .= a) inReplyTo
 data Payload = Init   { nodeId :: NodeId, nodeIds :: [NodeId] }
              | InitOk
              | Echo   { echo :: Text }
              | EchoOk { echo :: Text }
+             | Generate
+             | GenerateOk { id :: Text }
   deriving (Generic, Show)
 
 instance FromJSON Payload where
