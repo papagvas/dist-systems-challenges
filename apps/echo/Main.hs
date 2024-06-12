@@ -7,8 +7,8 @@ import System.IO (hSetBuffering, BufferMode(..), stdin, stdout)
 import Node
 
 main :: IO ()
-main = forever $ do
+main = do
   hSetBuffering stdin NoBuffering
   hSetBuffering stdout NoBuffering
   handleRequest
-  forkIO $ handleRequest
+  forever . forkIO $ handleRequest
