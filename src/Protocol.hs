@@ -1,11 +1,14 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Protocol where
 
 import Data.Aeson
-import Data.Text (Text)
+import Data.Aeson.KeyMap (fromList, union)
 import Data.Generics.Labels ()
+import Data.Text (Text)
 import GHC.Generics (Generic)
 
 newtype NodeId = MkNodeId Text deriving (Show, Generic, ToJSON, FromJSON)
@@ -17,14 +20,10 @@ data Message = MkMessage
   , body :: Body
   } deriving (Generic, Show)
 
-instance FromJSON Message where
-  parseJSON = withObject "Message" $ \obj -> do
-    src  <- obj .: "src"
-    dest <- obj .: "dest"
-    body <- obj .: "body"
-    return MkMessage{..}
+instance FromJSON Message
+
 instance ToJSON Message where
-  toJSON MkMessage{..} = object [ "src" .= src, "dest" .= dest, "body" .= body ]
+  toEncoding MkMessage{..} = pairs $ "src" .= src <> "dest" .= dest <> "body" .= body
 
 data Body = MkBody
   { msgId     :: Maybe MsgId
@@ -33,35 +32,22 @@ data Body = MkBody
   } deriving (Generic, Show)
 
 instance FromJSON Body where
-  parseJSON val = withObject "Body" (\obj -> parseJSON @Payload val >>= \payload -> do
-    msgId <- obj .:? "msg_id"
-    inReplyTo <- obj .:? "in_reply_to"
-    return MkBody {..}) val
+  parseJSON v = parseJSON @Payload v >>= \p -> withObject "msgBody" (\obj -> MkBody
+    <$> obj .: "msg_id"
+    <*> obj .:? "in_reply_to"
+    <*> pure p) v
 
 instance ToJSON Body where
-  toJSON MkBody {..} = case payload of
-    Init{..} -> object $ [ "type"     .= ("init" :: Text)
-                         , "node_id"  .= nodeId
-                         , "node_ids" .= nodeIds
-                         ] <> maybe mempty (\a -> [ "msg_id" .= a ]) msgId
-    InitOk -> object $ [ "type" .= ("init_ok" :: Text)
-                       ] <> maybe mempty (\a -> [ "in_reply_to" .= a ]) inReplyTo
-    Echo{..} -> object $ [ "type" .= ("echo" :: Text) 
-                         , "echo" .= echo
-                         ]
-                        <> maybe mempty (\a -> [ "msg_id" .= a ]) msgId
-    EchoOk{..} -> object $ [ "type" .= ("echo_ok" :: Text)
-                           , "echo" .= echo
-                           ] 
-                          <> maybe mempty (\a -> pure $ "msg_id" .= a) msgId
-                          <> maybe mempty (\a -> pure $ "in_reply_to" .= a) inReplyTo
-    Generate -> object $ [ "type" .= ("generate" :: Text)
-                         ] <> maybe mempty (\a -> [ "msg_id" .= a ]) msgId
-    GenerateOk id' -> object $ [ "type" .= ("generate_ok" :: Text)
-                           , "id" .= id'
-                           ]
-                          <> maybe mempty (\a -> pure $ "msg_id" .= a) msgId
-                          <> maybe mempty (\a -> pure $ "in_reply_to" .= a) inReplyTo
+  toJSON MkBody{..} = Object $ fromList kvs `union` toKM (toJSON payload)
+    where
+      toKM = \case
+        Object km -> km
+        _         -> fromList []
+      
+      kvs = case inReplyTo of
+        Nothing  -> ["msg_id" .= msgId]
+        Just irt -> ["msg_id" .= msgId, "in_reply_to" .= irt]
+
 data Payload = Init   { nodeId :: NodeId, nodeIds :: [NodeId] }
              | InitOk
              | Echo   { echo :: Text }
