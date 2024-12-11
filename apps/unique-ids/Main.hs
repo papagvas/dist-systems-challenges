@@ -11,10 +11,11 @@ main = do
   hSetBuffering stdin NoBuffering
   hSetBuffering stdout NoBuffering
   chan <- newChan
-  _ <- handleInit
+  
+  env <- createEnv
   _ <- forkIO . forever $ do
     msg <- receive
     writeChan chan msg
   forever $ do
     msg' <- readChan chan
-    respond msg'
+    runNode (respond msg') env

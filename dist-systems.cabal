@@ -22,6 +22,8 @@ common extensions
                       , ImportQualifiedPost
                       , RecordWildCards
                       , TypeApplications
+                      , RankNTypes
+                      , ScopedTypeVariables
 library
     import:           warnings
           ,           extensions
@@ -35,6 +37,8 @@ library
                  ,    aeson
                  ,    microlens
                  ,    generic-lens
+                 ,    containers
+                 ,    mtl
     hs-source-dirs:   src
     default-language: Haskell2010
 
@@ -46,8 +50,7 @@ executable echo
     -- other-extensions:
     build-depends:
         base ^>=4.17.2.0,
-        dist-systems,
-        bytestring
+        dist-systems
     hs-source-dirs:   apps/echo
     default-language: Haskell2010
 
@@ -59,7 +62,18 @@ executable unique-ids
     -- other-extensions:
     build-depends:
         base ^>=4.17.2.0,
-        dist-systems,
-        bytestring
+        dist-systems
     hs-source-dirs:   apps/unique-ids
+    default-language: Haskell2010
+
+executable broadcast
+    import:           warnings
+          ,           extensions
+    main-is:          Main.hs
+    -- other-modules:
+    -- other-extensions:
+    build-depends:
+        base ^>=4.17.2.0,
+        dist-systems
+    hs-source-dirs:   apps/broadcast
     default-language: Haskell2010
